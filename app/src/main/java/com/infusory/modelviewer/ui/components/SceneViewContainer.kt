@@ -47,7 +47,7 @@ fun SceneViewContainer(
             },
             update = { sceneView ->
                 // Enable camera manipulation gestures ONLY during Interaction Mode
-                // In Normal Mode, cameraManipulator is set to null so drag/pinch moves the container
+                // In Normal Mode, cameraManipulator is set to null so the container can be dragged/resized
                 val activeManipulator = defaultManipulator ?: sceneView.cameraManipulator
                 if (defaultManipulator == null && activeManipulator != null) {
                     defaultManipulator = activeManipulator
@@ -74,10 +74,23 @@ private fun createConfiguredSceneView(
     onLabelsProjected: (List<ModelPartLabel>) -> Unit
 ): SceneView {
     val sceneView = SceneView(context)
+    
+    // Crucial for SurfaceView inside Compose: renders above parent background
+    sceneView.setZOrderMediaOverlay(true)
+    
+    // Save camera manipulator for interaction mode
     onManipulatorCaptured(sceneView.cameraManipulator)
 
-    // Performance optimizations for low-end devices:
-    // Transparent rendering clear options
+    // Position camera aimed at model center
+    sceneView.cameraNode.position = Float3(0f, 0f, 2.8f)
+    sceneView.cameraNode.lookAt(Float3(0f, 0f, 0f))
+
+    // Ensure main directional light is active and bright
+    sceneView.mainLightNode?.apply {
+        intensity = 100_000f
+    }
+
+    // Transparent background clear
     sceneView.renderer.clearOptions = sceneView.renderer.clearOptions.apply {
         clear = true
     }
@@ -90,7 +103,8 @@ private fun createConfiguredSceneView(
     ) { modelInstance ->
         if (modelInstance != null) {
             val node = ModelNode(modelInstance = modelInstance).apply {
-                scaleToUnitCube(1.0f)
+                centerOrigin(Float3(0f, 0f, 0f))
+                scaleToUnitCube(1.2f)
             }
             sceneView.addChildNode(node)
             activeModelNode = node

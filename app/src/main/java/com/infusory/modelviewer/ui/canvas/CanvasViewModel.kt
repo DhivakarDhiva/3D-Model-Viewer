@@ -4,7 +4,6 @@ import android.app.Application
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.coerceIn
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.infusory.modelviewer.data.model.ModelAsset
@@ -123,11 +122,23 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
             current.copy(
                 activeModels = current.activeModels.map { model ->
                     if (model.instanceId == instanceId) {
-                        val newWidth = (model.size.width * zoomMultiplier)
+                        val oldW = model.size.width
+                        val oldH = model.size.height
+                        val newW = (oldW * zoomMultiplier)
                             .coerceIn(ModelContainerState.MIN_SIZE, ModelContainerState.MAX_SIZE)
-                        val newHeight = (model.size.height * zoomMultiplier)
+                        val newH = (oldH * zoomMultiplier)
                             .coerceIn(ModelContainerState.MIN_SIZE, ModelContainerState.MAX_SIZE)
-                        model.copy(size = DpSize(newWidth, newHeight))
+
+                        // Adjust position slightly to keep pinch centered
+                        val dw = (newW - oldW).value * 1.5f
+                        val dh = (newH - oldH).value * 1.5f
+                        val newX = (model.position.x - dw / 2f).coerceAtLeast(0f)
+                        val newY = (model.position.y - dh / 2f).coerceAtLeast(0f)
+
+                        model.copy(
+                            size = DpSize(newW, newH),
+                            position = Offset(newX, newY)
+                        )
                     } else {
                         model
                     }

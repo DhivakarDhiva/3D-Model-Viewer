@@ -2,9 +2,9 @@ package com.infusory.modelviewer.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,13 +14,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.infusory.modelviewer.data.model.ModelContainerState
-import com.infusory.modelviewer.ui.theme.SurfaceCard
 import com.infusory.modelviewer.ui.theme.SurfaceCardBorder
 import com.infusory.modelviewer.ui.theme.SurfaceCardBorderActive
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 @Composable
@@ -38,47 +39,47 @@ fun DraggableContainer(
     val borderColor = if (state.isInteractionMode) SurfaceCardBorderActive else SurfaceCardBorder
     val borderWidth = if (state.isInteractionMode) 2.dp else 1.dp
 
-    val containerModifier = if (!state.isInteractionMode) {
-        // Normal Mode: Intercept pan and pinch gestures on the container level
-        Modifier.pointerInput(state.instanceId) {
-            detectTransformGestures { _, pan, zoom, _ ->
-                onFocus()
-                if (pan != Offset.Zero) {
-                    onDrag(pan)
-                }
-                if (zoom != 1f) {
-                    onResize(zoom)
-                }
-            }
-        }
-    } else {
-        // Interaction Mode: Only intercept taps for focus; pass drags/pinches to 3D SceneView
-        Modifier.pointerInput(state.instanceId) {
-            detectTapGestures {
-                onFocus()
-            }
-        }
-    }
-
     Box(
         modifier = Modifier
             .offset { IntOffset(state.position.x.roundToInt(), state.position.y.roundToInt()) }
             .size(state.size)
-            .shadow(elevation = if (state.isInteractionMode) 16.dp else 8.dp, shape = RoundedCornerShape(cornerRadius))
+            .shadow(
+                elevation = if (state.isInteractionMode) 16.dp else 6.dp,
+                shape = RoundedCornerShape(cornerRadius)
+            )
             .clip(RoundedCornerShape(cornerRadius))
-            .background(SurfaceCard)
             .border(borderWidth, borderColor, RoundedCornerShape(cornerRadius))
-            .then(containerModifier)
     ) {
-        // 3D Scene content
+        // 1. 3D Viewport Content
         content()
 
-        // 2D Labels layer
+        // 2. Normal Mode Gesture Shield:
+        // When NOT in interaction mode, this transparent overlay intercepts 100% of touches.
+        // It captures 1-finger drag and 2-finger pinch cleanly, preventing native SurfaceView from stealing touches!
+        if (!state.isInteractionMode) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(state.instanceId) {
+                        detectTransformGestures(panZoomLock = false) { _, pan, zoom, _ ->
+                            onFocus()
+                            if (pan != Offset.Zero) {
+                                onDrag(pan)
+                            }
+                            if (abs(zoom - 1f) > 0.0005f) {
+                                onResize(zoom)
+                            }
+                        }
+                    }
+            )
+        }
+
+        // 3. 2D Part Labels Overlay
         if (state.showLabels && state.labels.isNotEmpty()) {
             PartLabelOverlay(labels = state.labels)
         }
 
-        // Action Buttons Overlay (top-right, always visible)
+        // 4. Action Buttons Overlay (top-right, highest z-index)
         ModelOverlayButtons(
             isInteractionMode = state.isInteractionMode,
             showLabels = state.showLabels,
