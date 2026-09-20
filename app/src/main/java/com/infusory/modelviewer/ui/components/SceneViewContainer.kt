@@ -27,6 +27,7 @@ import io.github.sceneview.node.ModelNode
 @Composable
 fun SceneViewContainer(
     state: ModelContainerState,
+    isTop: Boolean = false,
     onLabelsProjected: (List<ModelPartLabel>) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -53,6 +54,10 @@ fun SceneViewContainer(
                     defaultManipulator = activeManipulator
                 }
                 sceneView.cameraManipulator = if (state.isInteractionMode) defaultManipulator else null
+
+                // Dynamically sync SurfaceView native Z-order in SurfaceFlinger
+                // This ensures overlapping containers always render their 3D models in the correct front-to-back order
+                updateSurfaceZOrder(sceneView, isTop = isTop, zIndex = state.zIndex)
             }
         )
 
@@ -62,6 +67,63 @@ fun SceneViewContainer(
                 color = PrimaryAccent,
                 strokeWidth = 2.dp
             )
+        }
+    }
+}
+
+/**
+ * Ensures the underlying hardware SurfaceView in SurfaceFlinger respects the active container's
+ * z-ordering. Without this, SurfaceViews at the same sub-layer remain in their initial creation
+ * order, causing the 3D model to disappear behind an overlapped container even when the Compose card is on top.
+ */
+private fun updateSurfaceZOrder(surfaceView: SceneView, isTop: Boolean, zIndex: Float) {
+    // 1. Reorder in parent ViewGroup (AndroidViewHolder inside androidViewsHandler)
+    try {
+        val holder = surfaceView.parent as? android.view.View
+        val parentViewGroup = holder?.parent as? android.view.ViewGroup
+        if (isTop && holder != null && parentViewGroup != null) {
+            val count = parentViewGroup.childCount
+            if (count > 1 && parentViewGroup.getChildAt(count - 1) !== holder) {
+                parentViewGroup.bringChildToFront(holder)
+            }
+        }
+        surfaceView.bringToFront()
+        holder?.z = zIndex
+        surfaceView.z = zIndex
+    } catch (_: Throwable) {
+        // Suppress any hierarchy access issues
+    }
+
+    // 2. Set SurfaceView sub-layer in SurfaceFlinger:
+    // Assign discrete negative sub-layers (-99 to -1) based on zIndex so SurfaceFlinger
+    // composites overlapping 3D surfaces in the exact requested order.
+    var appliedReflection = false
+    try {
+        val targetLayer = -100 + zIndex.toInt().coerceIn(1, 95)
+        val field = android.view.SurfaceView::class.java.getDeclaredField("mRequestedSubLayer")
+        field.isAccessible = true
+        val currentLayer = field.getInt(surfaceView)
+        if (currentLayer != targetLayer) {
+            field.setInt(surfaceView, targetLayer)
+            surfaceView.requestLayout()
+            surfaceView.invalidate()
+        }
+        appliedReflection = true
+    } catch (_: Throwable) {
+        appliedReflection = false
+    }
+
+    // 3. Fallback using official setZOrderMediaOverlay API:
+    // When isTop is true: layer -1 (MediaOverlay)
+    // When isTop is false: layer -2 (Media)
+    // SurfaceFlinger guarantees layer -1 always renders on top of layer -2!
+    if (!appliedReflection) {
+        try {
+            surfaceView.setZOrderMediaOverlay(isTop)
+            surfaceView.requestLayout()
+            surfaceView.invalidate()
+        } catch (_: Throwable) {
+            // Suppress fallback errors
         }
     }
 }

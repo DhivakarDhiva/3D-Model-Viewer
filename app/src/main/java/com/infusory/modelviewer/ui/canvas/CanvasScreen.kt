@@ -37,6 +37,7 @@ fun CanvasScreen(
         // Render each active model container with its unique instance key
         uiState.activeModels.forEach { modelState ->
             androidx.compose.runtime.key(modelState.instanceId) {
+                val isTop = modelState.zIndex >= uiState.topZIndex
                 DraggableContainer(
                     state = modelState,
                     modifier = Modifier.zIndex(modelState.zIndex),
@@ -49,6 +50,7 @@ fun CanvasScreen(
                 ) {
                     SceneViewContainer(
                         state = modelState,
+                        isTop = isTop,
                         onLabelsProjected = { updatedLabels ->
                             viewModel.updateProjectedLabels(modelState.instanceId, updatedLabels)
                         }
