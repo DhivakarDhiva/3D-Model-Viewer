@@ -1,8 +1,8 @@
 package com.infusory.modelviewer.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
@@ -14,8 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.infusory.modelviewer.data.model.ModelContainerState
@@ -27,6 +27,7 @@ import kotlin.math.roundToInt
 @Composable
 fun DraggableContainer(
     state: ModelContainerState,
+    modifier: Modifier = Modifier,
     onDrag: (Offset) -> Unit,
     onResize: (Float) -> Unit,
     onFocus: () -> Unit,
@@ -40,7 +41,7 @@ fun DraggableContainer(
     val borderWidth = if (state.isInteractionMode) 2.dp else 1.dp
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .offset { IntOffset(state.position.x.roundToInt(), state.position.y.roundToInt()) }
             .size(state.size)
             .shadow(
@@ -54,21 +55,51 @@ fun DraggableContainer(
         content()
 
         // 2. Normal Mode Gesture Shield:
-        // When NOT in interaction mode, this transparent overlay intercepts 100% of touches.
-        // It captures 1-finger drag and 2-finger pinch cleanly, preventing native SurfaceView from stealing touches!
+        // When NOT in interaction mode, this overlay intercepts touches:
+        // - Exactly 1 finger: Drags the container smoothly across the screen.
+        // - 2 fingers: Pinches to resize the container without changing its position.
+        // - No position jumps or centroid teleportation.
         if (!state.isInteractionMode) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .pointerInput(state.instanceId) {
-                        detectTransformGestures(panZoomLock = false) { _, pan, zoom, _ ->
+                        awaitEachGesture {
+                            // Focus on first touch down
+                            awaitFirstDown(requireUnconsumed = false)
                             onFocus()
-                            if (pan != Offset.Zero) {
-                                onDrag(pan)
-                            }
-                            if (abs(zoom - 1f) > 0.0005f) {
-                                onResize(zoom)
-                            }
+
+                            var prevPinchDistance = 0f
+
+                            do {
+                                val event = awaitPointerEvent()
+                                val pressedChanges = event.changes.filter { it.pressed }
+
+                                if (pressedChanges.size == 1) {
+                                    // 1-FINGER DRAG
+                                    val currentPointer = pressedChanges.first()
+                                    if (currentPointer.positionChanged()) {
+                                        val delta = currentPointer.position - currentPointer.previousPosition
+                                        onDrag(delta)
+                                        currentPointer.consume()
+                                    }
+                                    prevPinchDistance = 0f
+                                } else if (pressedChanges.size >= 2) {
+                                    // 2-FINGER PINCH-RESIZE (no position mutation)
+                                    val p0 = pressedChanges[0].position
+                                    val p1 = pressedChanges[1].position
+                                    val distance = (p0 - p1).getDistance()
+
+                                    if (prevPinchDistance > 0f && distance > 0f) {
+                                        val zoomRatio = distance / prevPinchDistance
+                                        if (abs(zoomRatio - 1f) > 0.001f) {
+                                            onResize(zoomRatio)
+                                        }
+                                    }
+                                    prevPinchDistance = distance
+                                    pressedChanges.forEach { it.consume() }
+                                }
+                            } while (event.changes.any { it.pressed })
                         }
                     }
             )
@@ -90,3 +121,4 @@ fun DraggableContainer(
         )
     }
 }
+

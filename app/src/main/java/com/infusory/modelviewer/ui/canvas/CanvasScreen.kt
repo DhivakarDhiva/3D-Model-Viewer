@@ -34,29 +34,28 @@ fun CanvasScreen(
             .fillMaxSize()
             .background(CanvasBackground)
     ) {
-        // Render each active model container ordered by their zIndex
-        uiState.activeModels
-            .sortedBy { it.zIndex }
-            .forEach { modelState ->
-                Box(modifier = Modifier.zIndex(modelState.zIndex)) {
-                    DraggableContainer(
+        // Render each active model container with its unique instance key
+        uiState.activeModels.forEach { modelState ->
+            androidx.compose.runtime.key(modelState.instanceId) {
+                DraggableContainer(
+                    state = modelState,
+                    modifier = Modifier.zIndex(modelState.zIndex),
+                    onDrag = { delta -> viewModel.updatePosition(modelState.instanceId, delta) },
+                    onResize = { zoom -> viewModel.updateSize(modelState.instanceId, zoom) },
+                    onFocus = { viewModel.bringToFront(modelState.instanceId) },
+                    onToggleInteraction = { viewModel.toggleInteractionMode(modelState.instanceId) },
+                    onToggleLabels = { viewModel.toggleLabels(modelState.instanceId) },
+                    onClose = { viewModel.removeModel(modelState.instanceId) }
+                ) {
+                    SceneViewContainer(
                         state = modelState,
-                        onDrag = { delta -> viewModel.updatePosition(modelState.instanceId, delta) },
-                        onResize = { zoom -> viewModel.updateSize(modelState.instanceId, zoom) },
-                        onFocus = { viewModel.bringToFront(modelState.instanceId) },
-                        onToggleInteraction = { viewModel.toggleInteractionMode(modelState.instanceId) },
-                        onToggleLabels = { viewModel.toggleLabels(modelState.instanceId) },
-                        onClose = { viewModel.removeModel(modelState.instanceId) }
-                    ) {
-                        SceneViewContainer(
-                            state = modelState,
-                            onLabelsProjected = { updatedLabels ->
-                                viewModel.updateProjectedLabels(modelState.instanceId, updatedLabels)
-                            }
-                        )
-                    }
+                        onLabelsProjected = { updatedLabels ->
+                            viewModel.updateProjectedLabels(modelState.instanceId, updatedLabels)
+                        }
+                    )
                 }
             }
+        }
 
         // Floating "Add Model" Action Button (bottom center)
         ExtendedFloatingActionButton(

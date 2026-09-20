@@ -86,15 +86,15 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun bringToFront(instanceId: String) {
+        val model = _uiState.value.activeModels.find { it.instanceId == instanceId } ?: return
+        if (model.zIndex >= _uiState.value.topZIndex && _uiState.value.activeModels.size > 1) {
+            return // Already on top
+        }
         zIndexCounter += 1f
         _uiState.update { current ->
             current.copy(
-                activeModels = current.activeModels.map { model ->
-                    if (model.instanceId == instanceId) {
-                        model.copy(zIndex = zIndexCounter)
-                    } else {
-                        model
-                    }
+                activeModels = current.activeModels.map {
+                    if (it.instanceId == instanceId) it.copy(zIndex = zIndexCounter) else it
                 },
                 topZIndex = zIndexCounter
             )
@@ -129,15 +129,9 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
                         val newH = (oldH * zoomMultiplier)
                             .coerceIn(ModelContainerState.MIN_SIZE, ModelContainerState.MAX_SIZE)
 
-                        // Adjust position slightly to keep pinch centered
-                        val dw = (newW - oldW).value * 1.5f
-                        val dh = (newH - oldH).value * 1.5f
-                        val newX = (model.position.x - dw / 2f).coerceAtLeast(0f)
-                        val newY = (model.position.y - dh / 2f).coerceAtLeast(0f)
-
+                        // Resize only — keep container position completely stable without jumping
                         model.copy(
-                            size = DpSize(newW, newH),
-                            position = Offset(newX, newY)
+                            size = DpSize(newW, newH)
                         )
                     } else {
                         model
