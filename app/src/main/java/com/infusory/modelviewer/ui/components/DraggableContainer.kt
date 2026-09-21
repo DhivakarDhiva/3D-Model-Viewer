@@ -105,12 +105,7 @@ fun DraggableContainer(
             )
         }
 
-        // 3. 2D Part Labels Overlay
-        if (state.showLabels && state.labels.isNotEmpty()) {
-            PartLabelOverlay(labels = state.labels)
-        }
-
-        // 4. Action Buttons Overlay (top-right, highest z-index)
+        // 3. Action Buttons Overlay (top-right, highest z-index)
         ModelOverlayButtons(
             isInteractionMode = state.isInteractionMode,
             showLabels = state.showLabels,

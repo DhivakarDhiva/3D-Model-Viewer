@@ -29,22 +29,30 @@ fun PartLabelOverlay(
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier.fillMaxSize()) {
-        // Draw connector lines and anchor dots
+        // 1. Draw connector lines and anchor pins
         Canvas(modifier = Modifier.fillMaxSize()) {
             labels.forEach { label ->
                 val anchor = label.screenPosition
                 if (anchor != null) {
-                    // Line offset to position label badge slightly above-right of anchor point
-                    val badgeTarget = Offset(anchor.x + 28f, anchor.y - 32f)
+                    val isRightSide = anchor.x > size.width * 0.55f
+                    val lineEndX = if (isRightSide) anchor.x - 26f else anchor.x + 26f
+                    val lineEndY = anchor.y - 28f
+                    val badgeTarget = Offset(lineEndX, lineEndY)
 
-                    // Draw circular anchor pin on the 3D part
+                    // Outer cyan ring pin on 3D part
                     drawCircle(
                         color = LabelConnectorLine,
-                        radius = 4f,
+                        radius = 4.5f,
+                        center = anchor
+                    )
+                    // Inner white center dot for contrast
+                    drawCircle(
+                        color = Color.White,
+                        radius = 2f,
                         center = anchor
                     )
 
-                    // Draw connecting line to label pill
+                    // Connecting line to label pill
                     drawLine(
                         color = LabelConnectorLine,
                         start = anchor,
@@ -56,19 +64,24 @@ fun PartLabelOverlay(
             }
         }
 
-        // Render readable 2D text badges
+        // 2. Render readable 2D text badges
         labels.forEach { label ->
             val anchor = label.screenPosition
             if (anchor != null) {
-                val badgeX = (anchor.x + 28f).roundToInt()
-                val badgeY = (anchor.y - 48f).roundToInt()
+                val isRightSide = anchor.x > 150f
+                val badgeX = if (isRightSide) {
+                    (anchor.x - 110f).roundToInt().coerceAtLeast(8)
+                } else {
+                    (anchor.x + 26f).roundToInt().coerceAtLeast(8)
+                }
+                val badgeY = (anchor.y - 44f).roundToInt().coerceAtLeast(8)
 
                 Box(
                     modifier = Modifier
                         .offset { IntOffset(badgeX, badgeY) }
                         .background(LabelPillBackground, RoundedCornerShape(6.dp))
                         .border(1.dp, LabelPillBorder, RoundedCornerShape(6.dp))
-                        .padding(horizontal = 7.dp, vertical = 3.dp)
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
                         text = label.text,
@@ -81,3 +94,4 @@ fun PartLabelOverlay(
         }
     }
 }
+

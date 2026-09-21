@@ -20,20 +20,22 @@ import com.infusory.modelviewer.data.model.ModelContainerState
 import com.infusory.modelviewer.data.model.ModelPartLabel
 import com.infusory.modelviewer.ui.theme.PrimaryAccent
 import dev.romainguy.kotlin.math.Float3
+import dev.romainguy.kotlin.math.Float4
+import dev.romainguy.kotlin.math.times
 import io.github.sceneview.SceneView
-import io.github.sceneview.collision.Vector3
 import io.github.sceneview.node.ModelNode
 
 @Composable
 fun SceneViewContainer(
     state: ModelContainerState,
     isTop: Boolean = false,
-    onLabelsProjected: (List<ModelPartLabel>) -> Unit,
+    onLabelsProjected: ((List<ModelPartLabel>) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var isModelLoaded by remember { mutableStateOf(false) }
     var defaultManipulator by remember { mutableStateOf<Manipulator?>(null) }
     val latestState by rememberUpdatedState(state)
+    var projectedLabels by remember { mutableStateOf<List<ModelPartLabel>>(emptyList()) }
 
     Box(modifier = modifier.fillMaxSize()) {
         AndroidView(
@@ -44,7 +46,10 @@ fun SceneViewContainer(
                     stateProvider = { latestState },
                     onModelReady = { isModelLoaded = true },
                     onManipulatorCaptured = { defaultManipulator = it },
-                    onLabelsProjected = onLabelsProjected
+                    onLabelsProjected = { labels ->
+                        projectedLabels = labels
+                        onLabelsProjected?.invoke(labels)
+                    }
                 )
             },
             update = { sceneView ->
@@ -56,10 +61,14 @@ fun SceneViewContainer(
                 sceneView.cameraManipulator = if (state.isInteractionMode) defaultManipulator else null
 
                 // Dynamically sync SurfaceView native Z-order in SurfaceFlinger
-                // This ensures overlapping containers always render their 3D models in the correct front-to-back order
                 updateSurfaceZOrder(sceneView, isTop = isTop, zIndex = state.zIndex)
             }
         )
+
+        // 2D Part Labels Overlay: rendered directly on top of 3D SceneView
+        if (state.showLabels && projectedLabels.isNotEmpty()) {
+            PartLabelOverlay(labels = projectedLabels)
+        }
 
         if (!isModelLoaded) {
             CircularProgressIndicator(
@@ -73,8 +82,7 @@ fun SceneViewContainer(
 
 /**
  * Ensures the underlying hardware SurfaceView in SurfaceFlinger respects the active container's
- * z-ordering. Without this, SurfaceViews at the same sub-layer remain in their initial creation
- * order, causing the 3D model to disappear behind an overlapped container even when the Compose card is on top.
+ * z-ordering.
  */
 private fun updateSurfaceZOrder(surfaceView: SceneView, isTop: Boolean, zIndex: Float) {
     // 1. Reorder in parent ViewGroup (AndroidViewHolder inside androidViewsHandler)
@@ -95,8 +103,6 @@ private fun updateSurfaceZOrder(surfaceView: SceneView, isTop: Boolean, zIndex: 
     }
 
     // 2. Set SurfaceView sub-layer in SurfaceFlinger:
-    // Assign discrete negative sub-layers (-99 to -1) based on zIndex so SurfaceFlinger
-    // composites overlapping 3D surfaces in the exact requested order.
     var appliedReflection = false
     try {
         val targetLayer = -100 + zIndex.toInt().coerceIn(1, 95)
@@ -114,9 +120,6 @@ private fun updateSurfaceZOrder(surfaceView: SceneView, isTop: Boolean, zIndex: 
     }
 
     // 3. Fallback using official setZOrderMediaOverlay API:
-    // When isTop is true: layer -1 (MediaOverlay)
-    // When isTop is false: layer -2 (Media)
-    // SurfaceFlinger guarantees layer -1 always renders on top of layer -2!
     if (!appliedReflection) {
         try {
             surfaceView.setZOrderMediaOverlay(isTop)
@@ -197,26 +200,23 @@ private fun createConfiguredSceneView(
     sceneView.onFrame = { _ ->
         val currentState = stateProvider()
         if (currentState.showLabels && currentState.labels.isNotEmpty() && activeModelNode != null) {
-            val cameraNode = sceneView.cameraNode
             val updatedLabels = currentState.labels.map { label ->
+                val targetNode = activeModelNode?.nodes?.firstOrNull { node ->
+                    (node as? ModelNode.ChildNode)?.name == label.nodeName
+                } ?: activeModelNode?.nodes?.getOrNull(label.nodeIndex)
+
                 val localPos = Float3(
-                    x = label.localPosition[0],
-                    y = label.localPosition[1],
-                    z = label.localPosition[2]
-                )
-                val worldPos = activeModelNode?.getWorldPosition(localPos) ?: localPos
-
-                // Project 3D world coordinate through camera to 2D viewport coordinates
-                val screenPoint = cameraNode.worldToScreenPoint(
-                    Vector3(worldPos.x, worldPos.y, worldPos.z)
+                    label.localPosition.getOrElse(0) { 0f },
+                    label.localPosition.getOrElse(1) { 0f },
+                    label.localPosition.getOrElse(2) { 0f }
                 )
 
-                // Only show label if the point is in front of the camera (depth > 0)
-                if (screenPoint.z > 0f) {
-                    label.copy(screenPosition = Offset(screenPoint.x, screenPoint.y))
-                } else {
-                    label.copy(screenPosition = null)
-                }
+                val worldPos = targetNode?.worldPosition
+                    ?: activeModelNode?.getWorldPosition(localPos)
+                    ?: localPos
+
+                val screenOffset = projectWorldToScreen(sceneView, worldPos)
+                label.copy(screenPosition = screenOffset)
             }
             onLabelsProjected(updatedLabels)
         }
@@ -224,4 +224,40 @@ private fun createConfiguredSceneView(
 
     return sceneView
 }
+
+/**
+ * Projects a 3D world coordinate to 2D container pixel coordinates.
+ * Verifies that the point is strictly in front of the camera before applying
+ * projection and perspective divide.
+ */
+private fun projectWorldToScreen(
+    sceneView: SceneView,
+    worldPos: Float3
+): Offset? {
+    val cameraNode = sceneView.cameraNode
+    val viewportWidth = sceneView.width.toFloat()
+    val viewportHeight = sceneView.height.toFloat()
+    if (viewportWidth <= 0f || viewportHeight <= 0f) return null
+
+    // Transform from world space to clip space: viewProj = cullingProjection * view
+    val viewProj = cameraNode.cullingProjectionTransform * cameraNode.viewTransform
+    val clip = viewProj * Float4(worldPos.x, worldPos.y, worldPos.z, 1.0f)
+
+    // clip.w > 0 indicates point is strictly in front of the camera
+    if (clip.w <= 0.02f) return null
+
+    val ndcX = clip.x / clip.w
+    val ndcY = clip.y / clip.w
+
+    val screenX = (ndcX + 1.0f) * 0.5f * viewportWidth
+    val screenY = (1.0f - ndcY) * 0.5f * viewportHeight
+
+    // Keep point if within container visible area plus a small margin
+    if (screenX < -50f || screenX > viewportWidth + 50f || screenY < -50f || screenY > viewportHeight + 50f) {
+        return null
+    }
+
+    return Offset(screenX, screenY)
+}
+
 
