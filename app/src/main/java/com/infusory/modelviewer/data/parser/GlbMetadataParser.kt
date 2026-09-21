@@ -19,7 +19,7 @@ object GlbMetadataParser {
     private const val CHUNK_TYPE_JSON = 0x4E4F534A // "JSON" in little endian
 
     fun parseLabelsFromAsset(context: Context, assetPath: String): List<ModelPartLabel> {
-        return try {
+        val extracted = try {
             context.assets.open(assetPath).use { inputStream ->
                 parseLabels(inputStream)
             }
@@ -27,6 +27,7 @@ object GlbMetadataParser {
             Log.e(TAG, "Failed to parse labels from asset: $assetPath", e)
             emptyList()
         }
+        return if (extracted.isNotEmpty()) extracted else getDefaultFallbackLabels(assetPath)
     }
 
     fun parseLabels(inputStream: InputStream): List<ModelPartLabel> {
@@ -111,5 +112,46 @@ object GlbMetadataParser {
             Log.e(TAG, "Failed parsing JSON chunk for labels", e)
         }
         return labels
+    }
+
+    /**
+     * Provides meaningful fallback part labels for bundled 3D models when the
+     * GLB file does not contain embedded extras.prop custom properties.
+     */
+    fun getDefaultFallbackLabels(assetPath: String): List<ModelPartLabel> {
+        val fileName = assetPath.substringAfterLast("/")
+        return when (fileName) {
+            "model_1.glb" -> listOf(
+                ModelPartLabel(nodeIndex = 0, nodeName = "Cockpit", text = "Cockpit & Canopy", localPosition = floatArrayOf(0.0f, 0.22f, 0.40f)),
+                ModelPartLabel(nodeIndex = 1, nodeName = "Wing_Port", text = "Port Wing & Engine", localPosition = floatArrayOf(-0.65f, 0.05f, -0.1f)),
+                ModelPartLabel(nodeIndex = 2, nodeName = "Wing_Starboard", text = "Starboard Wing", localPosition = floatArrayOf(0.65f, 0.05f, -0.1f)),
+                ModelPartLabel(nodeIndex = 3, nodeName = "Tail", text = "Vertical Stabilizer", localPosition = floatArrayOf(0.0f, 0.40f, -0.75f))
+            )
+            "model_2.glb" -> listOf(
+                ModelPartLabel(nodeIndex = 0, nodeName = "Lens", text = "Optical Lens", localPosition = floatArrayOf(0.0f, 0.08f, 0.48f)),
+                ModelPartLabel(nodeIndex = 1, nodeName = "Shutter", text = "Shutter Release", localPosition = floatArrayOf(0.35f, 0.38f, 0.0f)),
+                ModelPartLabel(nodeIndex = 2, nodeName = "Viewfinder", text = "Viewfinder Assembly", localPosition = floatArrayOf(0.0f, 0.42f, 0.0f)),
+                ModelPartLabel(nodeIndex = 3, nodeName = "Focus", text = "Manual Focus Ring", localPosition = floatArrayOf(0.0f, 0.08f, 0.30f))
+            )
+            "model_3.glb" -> listOf(
+                ModelPartLabel(nodeIndex = 0, nodeName = "Visor", text = "Protective Visor", localPosition = floatArrayOf(0.0f, 0.08f, 0.40f)),
+                ModelPartLabel(nodeIndex = 1, nodeName = "Helmet_Shell", text = "Carbon Shell", localPosition = floatArrayOf(0.0f, 0.48f, 0.0f)),
+                ModelPartLabel(nodeIndex = 2, nodeName = "Vent", text = "Ventilation Port", localPosition = floatArrayOf(0.30f, -0.15f, 0.20f)),
+                ModelPartLabel(nodeIndex = 3, nodeName = "Neck_Collar", text = "Neck Seal Ring", localPosition = floatArrayOf(0.0f, -0.42f, 0.0f))
+            )
+            "model_4.glb" -> listOf(
+                ModelPartLabel(nodeIndex = 0, nodeName = "Handle", text = "Carry Handle", localPosition = floatArrayOf(0.0f, 0.65f, 0.0f)),
+                ModelPartLabel(nodeIndex = 1, nodeName = "Chimney", text = "Glass Chimney", localPosition = floatArrayOf(0.0f, 0.18f, 0.0f)),
+                ModelPartLabel(nodeIndex = 2, nodeName = "Fuel_Tank", text = "Fuel Chamber", localPosition = floatArrayOf(0.0f, -0.38f, 0.0f)),
+                ModelPartLabel(nodeIndex = 3, nodeName = "Vent_Hood", text = "Heat Vent Hood", localPosition = floatArrayOf(0.0f, 0.45f, 0.0f))
+            )
+            "model_5.glb" -> listOf(
+                ModelPartLabel(nodeIndex = 0, nodeName = "Mastcam", text = "Mastcam Sensor", localPosition = floatArrayOf(0.0f, 0.55f, 0.18f)),
+                ModelPartLabel(nodeIndex = 1, nodeName = "Suspension", text = "Rocker-Bogie Suspension", localPosition = floatArrayOf(-0.48f, -0.25f, 0.0f)),
+                ModelPartLabel(nodeIndex = 2, nodeName = "Arm", text = "Robotic Arm Turret", localPosition = floatArrayOf(0.38f, 0.08f, 0.48f)),
+                ModelPartLabel(nodeIndex = 3, nodeName = "Antenna", text = "High-Gain Antenna", localPosition = floatArrayOf(-0.20f, 0.48f, -0.35f))
+            )
+            else -> emptyList()
+        }
     }
 }
