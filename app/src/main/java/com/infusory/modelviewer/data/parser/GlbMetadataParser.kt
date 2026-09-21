@@ -122,34 +122,34 @@ object GlbMetadataParser {
         val fileName = assetPath.substringAfterLast("/")
         return when (fileName) {
             "model_1.glb" -> listOf(
-                ModelPartLabel(nodeIndex = 0, nodeName = "Cockpit", text = "Cockpit & Canopy", localPosition = floatArrayOf(0.0f, 0.22f, 0.40f)),
-                ModelPartLabel(nodeIndex = 1, nodeName = "Wing_Port", text = "Port Wing & Engine", localPosition = floatArrayOf(-0.65f, 0.05f, -0.1f)),
-                ModelPartLabel(nodeIndex = 2, nodeName = "Wing_Starboard", text = "Starboard Wing", localPosition = floatArrayOf(0.65f, 0.05f, -0.1f)),
-                ModelPartLabel(nodeIndex = 3, nodeName = "Tail", text = "Vertical Stabilizer", localPosition = floatArrayOf(0.0f, 0.40f, -0.75f))
+                ModelPartLabel(nodeIndex = 0, nodeName = "Cockpit", text = "Cockpit & Canopy", localPosition = floatArrayOf(0.0f, 0.22f, 0.35f)),
+                ModelPartLabel(nodeIndex = 1, nodeName = "Wing_Port", text = "Port Wing", localPosition = floatArrayOf(-0.65f, 0.04f, -0.05f)),
+                ModelPartLabel(nodeIndex = 2, nodeName = "Wing_Starboard", text = "Starboard Wing", localPosition = floatArrayOf(0.65f, 0.04f, -0.05f)),
+                ModelPartLabel(nodeIndex = 3, nodeName = "Tail", text = "Vertical Tail", localPosition = floatArrayOf(0.0f, 0.38f, -0.65f))
             )
             "model_2.glb" -> listOf(
-                ModelPartLabel(nodeIndex = 0, nodeName = "Lens", text = "Optical Lens", localPosition = floatArrayOf(0.0f, 0.08f, 0.48f)),
-                ModelPartLabel(nodeIndex = 1, nodeName = "Shutter", text = "Shutter Release", localPosition = floatArrayOf(0.35f, 0.38f, 0.0f)),
-                ModelPartLabel(nodeIndex = 2, nodeName = "Viewfinder", text = "Viewfinder Assembly", localPosition = floatArrayOf(0.0f, 0.42f, 0.0f)),
-                ModelPartLabel(nodeIndex = 3, nodeName = "Focus", text = "Manual Focus Ring", localPosition = floatArrayOf(0.0f, 0.08f, 0.30f))
+                ModelPartLabel(nodeIndex = 0, nodeName = "Lens", text = "Optical Lens", localPosition = floatArrayOf(0.0f, 0.04f, 0.50f)),
+                ModelPartLabel(nodeIndex = 1, nodeName = "Shutter", text = "Shutter Release", localPosition = floatArrayOf(0.32f, 0.35f, 0.05f)),
+                ModelPartLabel(nodeIndex = 2, nodeName = "Viewfinder", text = "Viewfinder", localPosition = floatArrayOf(-0.22f, 0.38f, 0.02f)),
+                ModelPartLabel(nodeIndex = 3, nodeName = "Focus", text = "Focus Ring", localPosition = floatArrayOf(-0.25f, 0.04f, 0.28f))
             )
             "model_3.glb" -> listOf(
-                ModelPartLabel(nodeIndex = 0, nodeName = "Visor", text = "Protective Visor", localPosition = floatArrayOf(0.0f, 0.08f, 0.40f)),
-                ModelPartLabel(nodeIndex = 1, nodeName = "Helmet_Shell", text = "Carbon Shell", localPosition = floatArrayOf(0.0f, 0.48f, 0.0f)),
-                ModelPartLabel(nodeIndex = 2, nodeName = "Vent", text = "Ventilation Port", localPosition = floatArrayOf(0.30f, -0.15f, 0.20f)),
-                ModelPartLabel(nodeIndex = 3, nodeName = "Neck_Collar", text = "Neck Seal Ring", localPosition = floatArrayOf(0.0f, -0.42f, 0.0f))
+                ModelPartLabel(nodeIndex = 0, nodeName = "Visor", text = "Face Visor", localPosition = floatArrayOf(0.0f, 0.06f, 0.45f)),
+                ModelPartLabel(nodeIndex = 1, nodeName = "Helmet_Shell", text = "Outer Shell", localPosition = floatArrayOf(0.0f, 0.46f, -0.05f)),
+                ModelPartLabel(nodeIndex = 2, nodeName = "Vent", text = "Right Vent", localPosition = floatArrayOf(0.32f, -0.15f, 0.22f)),
+                ModelPartLabel(nodeIndex = 3, nodeName = "Comms", text = "Left Audio Comms", localPosition = floatArrayOf(-0.38f, 0.02f, 0.05f))
             )
             "model_4.glb" -> listOf(
-                ModelPartLabel(nodeIndex = 0, nodeName = "Handle", text = "Carry Handle", localPosition = floatArrayOf(0.0f, 0.65f, 0.0f)),
-                ModelPartLabel(nodeIndex = 1, nodeName = "Chimney", text = "Glass Chimney", localPosition = floatArrayOf(0.0f, 0.18f, 0.0f)),
-                ModelPartLabel(nodeIndex = 2, nodeName = "Fuel_Tank", text = "Fuel Chamber", localPosition = floatArrayOf(0.0f, -0.38f, 0.0f)),
-                ModelPartLabel(nodeIndex = 3, nodeName = "Vent_Hood", text = "Heat Vent Hood", localPosition = floatArrayOf(0.0f, 0.45f, 0.0f))
+                ModelPartLabel(nodeIndex = 0, nodeName = "Handle", text = "Carry Handle", localPosition = floatArrayOf(0.0f, 0.62f, 0.0f)),
+                ModelPartLabel(nodeIndex = 1, nodeName = "Chimney", text = "Glass Chimney", localPosition = floatArrayOf(0.18f, 0.15f, 0.22f)),
+                ModelPartLabel(nodeIndex = 2, nodeName = "Fuel_Tank", text = "Fuel Base", localPosition = floatArrayOf(-0.22f, -0.38f, 0.10f)),
+                ModelPartLabel(nodeIndex = 3, nodeName = "Vent_Hood", text = "Top Vent", localPosition = floatArrayOf(-0.25f, 0.42f, -0.10f))
             )
             "model_5.glb" -> listOf(
                 ModelPartLabel(nodeIndex = 0, nodeName = "Mastcam", text = "Mastcam Sensor", localPosition = floatArrayOf(0.0f, 0.55f, 0.18f)),
-                ModelPartLabel(nodeIndex = 1, nodeName = "Suspension", text = "Rocker-Bogie Suspension", localPosition = floatArrayOf(-0.48f, -0.25f, 0.0f)),
-                ModelPartLabel(nodeIndex = 2, nodeName = "Arm", text = "Robotic Arm Turret", localPosition = floatArrayOf(0.38f, 0.08f, 0.48f)),
-                ModelPartLabel(nodeIndex = 3, nodeName = "Antenna", text = "High-Gain Antenna", localPosition = floatArrayOf(-0.20f, 0.48f, -0.35f))
+                ModelPartLabel(nodeIndex = 1, nodeName = "Suspension", text = "Suspension Bogie", localPosition = floatArrayOf(-0.48f, -0.22f, 0.05f)),
+                ModelPartLabel(nodeIndex = 2, nodeName = "Arm", text = "Robotic Arm", localPosition = floatArrayOf(0.38f, 0.05f, 0.42f)),
+                ModelPartLabel(nodeIndex = 3, nodeName = "Antenna", text = "High-Gain Antenna", localPosition = floatArrayOf(-0.22f, 0.45f, -0.32f))
             )
             else -> emptyList()
         }
