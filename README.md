@@ -4,6 +4,12 @@ A single-activity, high-performance 3D model viewer for Android built with **Kot
 
 ---
 
+## 🎥 App Demo
+
+https://github.com/user-attachments/assets/68d84109-59d7-462f-9faa-2597938dc5f1
+
+---
+
 ## 🚀 Architecture & Technical Decisions
 
 ### 1. Choice of 3D Engine: SceneView (Filament Backend)
