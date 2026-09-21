@@ -14,11 +14,11 @@ data class ModelAsset(
 
     companion object {
         val DEFAULT_MODELS = listOf(
-            ModelAsset("model_1", "model_1.glb", "Mechanical Assembly"),
-            ModelAsset("model_2", "model_2.glb", "Turbine Engine"),
-            ModelAsset("model_3", "model_3.glb", "Piston Cylinder"),
-            ModelAsset("model_4", "model_4.glb", "Gearbox Transmission"),
-            ModelAsset("model_5", "model_5.glb", "Hydraulic Actuator")
+            ModelAsset("model_1", "model_1.glb", "Airplane", "Aviation"),
+            ModelAsset("model_2", "model_2.glb", "Antique Camera", "Photography"),
+            ModelAsset("model_3", "model_3.glb", "Damaged Helmet", "Sci-Fi"),
+            ModelAsset("model_4", "model_4.glb", "Lantern", "Antiques"),
+            ModelAsset("model_5", "model_5.glb", "Mars Rover", "Space Exploration")
         )
     }
 }
